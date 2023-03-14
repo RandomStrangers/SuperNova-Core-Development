@@ -1,5 +1,5 @@
 /*
-    Copyright 2010 MCSharp team (Modified for use with MCZall/MCLawl/SuperNova)
+    Copyright 2010 MCSharp team (Modified for use with MCZall/MCLawl/MCForge)
     
     Dual-licensed under the Educational Community License, Version 2.0 and
     the GNU General Public License, Version 3 (the "Licenses"); you may
@@ -16,27 +16,27 @@
     permissions and limitations under the Licenses.
  */
 using System;
-using System.Diagnostics;
-using System.IO;
 using System.Net;
-using System.Reflection;
-using SuperNova.Network;
-using SuperNova.Tasks;
+using MCGalaxy.Network;
+using MCGalaxy.Tasks;
 
-namespace SuperNova {
+namespace MCGalaxy 
+{
     /// <summary> Checks for and applies software updates. </summary>
-    public static class Updater {
-        
-        public static string SourceURL = "https://github.com/RandomStrangers/SuperNova/";
-        public const string BaseURL    = "https://github.com/RandomStrangers/SuperNova/blob/master/";
-        public const string UploadsURL = "https://github.com/RandomStrangers/SuperNova/tree/master/Uploads";
+    public static class Updater 
+    {    
+        public static string SourceURL = "https://github.com/RandomStrangers/SuperNova-Core-Development";
+        public const string BaseURL    = "https://github.com/RandomStrangers/SuperNova-Core-Development/blob/master/";
+        public const string UploadsURL = "https://github.com/RandomStrangers/SuperNova-Core-Development/tree/master/Uploads";
         
         const string CurrentVersionURL = BaseURL + "Uploads/current_version.txt";
-        #if TEN_BIT_BLOCKS
+#if MCG_STANDALONE
+        static string dllURL = "https://cs.classicube.net/mcgalaxy/" + IOperatingSystem.DetectOS().StandaloneName;
+#elif TEN_BIT_BLOCKS
         const string dllURL = BaseURL + "Uploads/SuperNova_infid.dll?raw=true";
-        #else
-        const string dllURL = BaseURL + "Uploads/SuperNova_.dll?raw=true";
-        #endif
+#else
+        const string dllURL = BaseURL + "Uploads/SuperNova.dll?raw=true";
+#endif
         const string changelogURL = BaseURL + "Changelog.txt";
         const string guiURL = BaseURL + "Uploads/SuperNova.exe?raw=true";
         const string cliURL = BaseURL + "Uploads/SuperNovaCLI.exe?raw=true";
@@ -77,30 +77,28 @@ namespace SuperNova {
                 
                 WebClient client = HttpUtil.CreateWebClient();
                 client.DownloadFile(dllURL, "SuperNova_.update");
+#if !MCG_STANDALONE
                 client.DownloadFile(guiURL, "SuperNova.update");
                 client.DownloadFile(cliURL, "SuperNovaCLI.update");
+#endif
                 client.DownloadFile(changelogURL, "Changelog.txt");
 
-                Level[] levels = LevelInfo.Loaded.Items;
-                foreach (Level lvl in levels) {
-                    if (!lvl.SaveChanges) continue;
-                    lvl.Save();
-                    lvl.SaveBlockDBChanges();
-                }
-
+                Server.SaveAllLevels();
                 Player[] players = PlayerInfo.Online.Items;
                 foreach (Player pl in players) pl.SaveStats();
                 
+                string serverDLL = Server.GetServerDLLPath();
+                
                 // Move current files to previous files (by moving instead of copying, 
                 //  can overwrite original the files without breaking the server)
-                AtomicIO.TryMove("SuperNova_.dll", "prev_SuperNova_.dll");
-                AtomicIO.TryMove("SuperNova.exe", "prev_SuperNova.exe");
+                AtomicIO.TryMove(serverDLL,         "prev_SuperNova_.dll");
+                AtomicIO.TryMove("SuperNova.exe",    "prev_SuperNova.exe");
                 AtomicIO.TryMove("SuperNovaCLI.exe", "prev_SuperNovaCLI.exe");
-                
+
                 // Move update files to current files
-                File.Move("SuperNova_.update",   "SuperNova_.dll");
-                File.Move("SuperNova.update",    "SuperNova.exe");
-                File.Move("SuperNovaCLI.update", "SuperNovaCLI.exe");                             
+                AtomicIO.TryMove("SuperNova_.update",   serverDLL);
+                AtomicIO.TryMove("SuperNova.update",    "SuperNova.exe");
+                AtomicIO.TryMove("SuperNovaCLI.update", "SuperNovaCLI.exe");                             
 
                 Server.Stop(true, "Updating server.");
             } catch (Exception ex) {
