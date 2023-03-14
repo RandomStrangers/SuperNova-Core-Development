@@ -17,10 +17,10 @@
  */
 using System;
 using System.Net;
-using MCGalaxy.Network;
-using MCGalaxy.Tasks;
+using SuperNova.Network;
+using SuperNova.Tasks;
 
-namespace MCGalaxy 
+namespace SuperNova 
 {
     /// <summary> Checks for and applies software updates. </summary>
     public static class Updater 
